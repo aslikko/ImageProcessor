@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logo Hazırlayıcı</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Logo Hazırlayıcı</h1>
+    <p class="sub">Logoyu yükle, boyutları seç, kontrol et ve indir. Tüm işlem tarayıcında yapılır, dosya hiçbir yere gönderilmez.</p>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <section class="block">
+        <h2>1. Logo</h2>
+        <label id="dropzone" class="dropzone" tabindex="0">
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/bmp,.svg" hidden>
+          <span class="dz-title">Dosyayı sürükle, tıkla veya yapıştır (Ctrl+V)</span>
+          <span class="dz-hint">SVG (en iyisi), PNG, JPG, WEBP</span>
+        </label>
+        <div id="sourceInfo" class="source-info" hidden></div>
+        <label class="field">
+          <span>Marka adı (dosya adında kullanılır)</span>
+          <input id="brandName" type="text" placeholder="ornek-marka">
+        </label>
+      </section>
+
+      <section class="block">
+        <h2>2. Boyutlar</h2>
+        <div id="sizeList" class="size-list"></div>
+        <div class="custom-size">
+          <input id="customW" type="number" min="8" max="5000" placeholder="G">
+          <span>×</span>
+          <input id="customH" type="number" min="8" max="5000" placeholder="Y">
+          <button id="addSize" type="button" class="btn small">Ekle</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>3. Çıktı</h2>
+        <div class="seg" role="radiogroup" aria-label="Format">
+          <label><input type="radio" name="format" value="jpg" checked><span>JPG</span></label>
+          <label><input type="radio" name="format" value="png"><span>PNG</span></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>DPI</span><input id="dpi" type="number" min="1" max="1200" value="72"></label>
+          <label class="field" id="qualityField"><span>JPG kalitesi <b id="qualityVal">92</b></span><input id="quality" type="range" min="60" max="100" value="92"></label>
+        </div>
+        <label class="field">
+          <span>Kenar boşluğu <b id="paddingVal">%10</b></span>
+          <input id="padding" type="range" min="0" max="30" value="10">
+        </label>
+        <label class="field">
+          <span>Zemin rengi</span>
+          <select id="frameMode">
+            <option value="auto">Otomatik (kaynağa göre)</option>
+            <option value="white">Beyaz</option>
+            <option value="transparent">Şeffaf (yalnızca PNG)</option>
+            <option value="custom">Özel renk…</option>
+          </select>
+        </label>
+        <input id="customColor" type="color" value="#ffffff" hidden>
+        <label class="check"><input id="sharpen" type="checkbox" checked> Büyütmede akıllı keskinleştirme</label>
+      </section>
+
+      <section class="block">
+        <h2>4. Arka plan temizleme</h2>
+        <label class="check"><input id="removeBg" type="checkbox"> Arka planı temizle</label>
+        <div id="bgOptions" class="sub-options" hidden>
+          <label class="field">
+            <span>Tolerans <b id="toleranceVal">30</b></span>
+            <input id="tolerance" type="range" min="5" max="90" value="30">
+          </label>
+          <label class="check"><input id="globalRemove" type="checkbox"> Harf içi boşlukları da temizle (o, a, e…)</label>
+          <p class="hint" id="bgHint"></p>
+        </div>
+      </section>
+    </aside>
+
+    <section class="results">
+      <div id="empty" class="empty">
+        <p>Başlamak için bir logo yükleyin.</p>
+        <ul>
+          <li>Logo, içerik kenarlarına göre otomatik kırpılır.</li>
+          <li>Oranı korunarak her çerçeveye mümkün olan en büyük boyutta oturtulur.</li>
+          <li>Çözünürlük düşükse kademeli büyütme + keskinleştirme yapılır.</li>
+          <li>Kalite, bulanıklık, kontrast ve köşe kontrolleri yapılıp öneriler verilir.</li>
+        </ul>
+      </div>
+
+      <div id="output" hidden>
+        <div class="toolbar">
+          <div id="summary" class="summary"></div>
+          <div class="toolbar-actions">
+            <label class="check inline"><input id="zoom" type="checkbox"> 2× önizleme</label>
+            <button id="downloadAll" type="button" class="btn primary">Tümünü indir (ZIP)</button>
+          </div>
+        </div>
+        <div id="cards" class="cards"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
