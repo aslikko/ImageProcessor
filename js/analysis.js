@@ -156,68 +156,68 @@ export function evaluateSize(a, size, opts) {
   const add = (level, text, fix) => items.push({ level, text, fix });
 
   if (a.isVector) {
-    add('ok', 'Vektörel kaynak (SVG) – her boyutta keskin çıktı.');
+    add('ok', 'Vector source (SVG) – sharp output at any size.');
   } else if (scale <= 1) {
-    add('ok', `Kaynak çözünürlük yeterli (logo ${a.logoWidth}×${a.logoHeight}px → ${outW}×${outH}px, küçültme).`);
+    add('ok', `Source resolution is sufficient (logo ${a.logoWidth}×${a.logoHeight}px → ${outW}×${outH}px, downscaled).`);
   } else if (scale <= 2) {
-    add('info', `Kaynak bu boyut için biraz küçük; ${scale.toFixed(1)}× büyütüldü ve keskinleştirildi.`);
+    add('info', `Source is slightly small for this size; upscaled ${scale.toFixed(1)}× and sharpened.`);
   } else if (scale <= 4) {
-    add('warn', `Kaynak düşük çözünürlüklü: ${scale.toFixed(1)}× büyütme gerekti. Çıktı hafif yumuşak olabilir; markadan daha büyük PNG veya SVG istemek daha iyi olur.`);
+    add('warn', `Low-resolution source: needed ${scale.toFixed(1)}× upscaling. Output may look slightly soft; better to request a larger PNG or an SVG from the brand.`);
   } else {
-    add('error', `Kaynak çok küçük (${a.logoWidth}×${a.logoHeight}px): ${scale.toFixed(1)}× büyütme gerekti. Kalite belirgin şekilde düşecek – markadan SVG veya en az ${Math.ceil(outW)}px genişliğinde PNG isteyin.`);
+    add('error', `Source is too small (${a.logoWidth}×${a.logoHeight}px): needed ${scale.toFixed(1)}× upscaling. Quality will drop noticeably – request an SVG or a PNG at least ${Math.ceil(outW)}px wide from the brand.`);
   }
 
   if (!a.isVector && a.hasEdges) {
     if (a.edgeWidthAnalysis > 2.6) {
-      add('warn', `Kaynak görsel bulanık görünüyor (kenar geçişi ~${a.edgeWidthAnalysis.toFixed(1)}px). Daha net bir kaynak dosya önerilir.`);
+      add('warn', `Source image looks blurry (edge transition ~${a.edgeWidthAnalysis.toFixed(1)}px). A sharper source file is recommended.`);
     } else if (scale > 1 && outEdge > 2.5) {
-      add('warn', `Bu boyutta kenarlar yumuşak görünebilir (çıktıda ~${outEdge.toFixed(1)}px geçiş).`);
+      add('warn', `Edges may look soft at this size (~${outEdge.toFixed(1)}px transition in output).`);
     }
     if (scale > 0.7 && (a.noise > 2.2 || (a.sourceType === 'image/jpeg' && a.noise > 1.2))) {
-      add('warn', 'Düz renk alanlarında sıkıştırma/gürültü izleri var (muhtemelen JPEG kaynağı). Mümkünse PNG/SVG kaynak kullanın.');
+      add('warn', 'Compression artifacts/noise in flat colour areas (likely a JPEG source). Use a PNG/SVG source if possible.');
     }
   }
 
   const sizeAspect = width / height;
   const mismatch = Math.max(a.aspect / sizeAspect, sizeAspect / a.aspect);
   if (fill < 0.18) {
-    add('warn', `Logo bu çerçevenin yalnızca %${Math.round(fill * 100)}'ini dolduruyor; çok küçük kalacak.` +
-      (Math.abs(sizeAspect - 1) < 0.05 && a.aspect > 1.8 ? ' Kare boyutlar için markanın ikon/simge versiyonunu kullanmak daha iyi olur.' : ''),
-    opts.padding > 0.05 ? { action: 'padding', value: 0.04, label: 'Boşluğu %4\'e düşür' } : null);
+    add('warn', `Logo fills only ${Math.round(fill * 100)}% of this frame; it will look very small.` +
+      (Math.abs(sizeAspect - 1) < 0.05 && a.aspect > 1.8 ? ' For square sizes, using the brand\'s icon/symbol version works better.' : ''),
+    opts.padding > 0.05 ? { action: 'padding', value: 0.04, label: 'Reduce padding to 4%' } : null);
   } else if (mismatch > 2.2) {
-    add('info', `Logo oranı (${a.aspect.toFixed(2)}) çerçeve oranından (${sizeAspect.toFixed(2)}) çok farklı; kenarlarda geniş boşluk kalacak.`);
+    add('info', `Logo aspect ratio (${a.aspect.toFixed(2)}) differs a lot from the frame (${sizeAspect.toFixed(2)}); there will be wide empty margins.`);
   }
 
   if (width < 100 && a.logoHeight > 0 && outH < 24) {
-    add('warn', `Bu küçük boyutta logo yüksekliği ${outH}px; ince yazılar okunmayabilir.`);
+    add('warn', `At this small size the logo is ${outH}px tall; fine text may not be legible.`);
   }
 
   // background / format checks
   const frameColor = opts.frameColor; // null = transparent
   if (opts.format === 'jpg' && a.transparent) {
-    add('info', `JPG şeffaflık desteklemez; şeffaf alanlar ${frameColor ? toHex(frameColor) : 'beyaz'} ile dolduruldu.`);
+    add('info', `JPG doesn't support transparency; transparent areas were filled with ${frameColor ? toHex(frameColor) : 'white'}.`);
   }
   if (!opts.removeBg && a.bg.type === 'solid' && frameColor && colorDist(frameColor.r, frameColor.g, frameColor.b, a.bg.color.r, a.bg.color.g, a.bg.color.b) > 12) {
-    add('warn', `Kaynağın zemini (${toHex(a.bg.color)}) çerçeve renginden farklı; logonun etrafında kutu görünebilir.`,
-      { action: 'removeBg', label: 'Arka planı temizle' });
+    add('warn', `Source background (${toHex(a.bg.color)}) differs from the frame colour; a box may be visible around the logo.`,
+      { action: 'removeBg', label: 'Remove background' });
   }
   if (!opts.removeBg && a.bg.type === 'mixed') {
-    add('warn', 'Arka plan düz renk değil (gradyan/fotoğraf). Sonuç beklendiği gibi olmayabilir; şeffaf veya düz zeminli kaynak tercih edin.');
+    add('warn', 'Background is not a solid colour (gradient/photo). Results may be off; prefer a transparent or solid-background source.');
   }
   if (a.logoColor && frameColor && !a.rounded) {
     const cr = contrastRatio(a.logoColor, frameColor);
     if (cr < 1.6) {
       const alt = contrastRatio(a.logoColor, { r: 255, g: 255, b: 255 }) > contrastRatio(a.logoColor, { r: 0, g: 0, b: 0 }) ? '#ffffff' : '#000000';
-      add('warn', `Logo rengi (${toHex(a.logoColor)}) ile zemin arasında kontrast çok düşük (${cr.toFixed(1)}:1); logo seçilmeyebilir.`,
-        { action: 'frameColor', value: alt, label: `Zemini ${alt === '#ffffff' ? 'beyaz' : 'siyah'} yap` });
+      add('warn', `Very low contrast between logo colour (${toHex(a.logoColor)}) and background (${cr.toFixed(1)}:1); the logo may be hard to see.`,
+        { action: 'frameColor', value: alt, label: `Use ${alt === '#ffffff' ? 'white' : 'black'} background` });
     }
   }
   if (a.rounded) {
     const hex = toHex(a.rounded.color);
     const fixed = frameColor && colorDist(frameColor.r, frameColor.g, frameColor.b, a.rounded.color.r, a.rounded.color.g, a.rounded.color.b) < 12;
     if (!fixed) {
-      add('warn', `Kaynakta yuvarlatılmış köşeli bir zemin var (${hex}). Müşteri yuvarlak köşe istemiyor: çerçeveyi bu renkle doldurmak köşeleri düz yapar.`,
-        { action: 'roundedFix', value: hex, label: `Çerçeveyi ${hex} ile doldur` });
+      add('warn', `Source has a rounded-corner tile (${hex}). The client wants no rounded corners: filling the frame with this colour makes the corners square.`,
+        { action: 'roundedFix', value: hex, label: `Fill frame with ${hex}` });
     }
   }
 

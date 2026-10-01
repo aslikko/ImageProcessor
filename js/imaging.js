@@ -17,7 +17,7 @@ function loadImageFromUrl(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Görsel okunamadı. Dosya bozuk ya da desteklenmeyen bir formatta olabilir.'));
+    img.onerror = () => reject(new Error('Could not read the image. The file may be corrupt or in an unsupported format.'));
     img.src = url;
   });
 }
@@ -26,7 +26,7 @@ async function loadSvg(file) {
   const text = await file.text();
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
   const svg = doc.documentElement;
-  if (!svg || svg.nodeName.toLowerCase() !== 'svg') throw new Error('SVG dosyası okunamadı.');
+  if (!svg || svg.nodeName.toLowerCase() !== 'svg') throw new Error('Could not read the SVG file.');
 
   let vw = parseFloat(svg.getAttribute('width')) || 0;
   let vh = parseFloat(svg.getAttribute('height')) || 0;
@@ -58,7 +58,7 @@ export async function loadImageFile(file) {
   const name = file.name.toLowerCase();
   if (file.type === 'image/svg+xml' || name.endsWith('.svg')) return loadSvg(file);
   if (/\.(pdf|ai|eps|psd)$/.test(name)) {
-    throw new Error('PDF/AI/EPS/PSD doğrudan desteklenmiyor. Lütfen SVG, PNG, JPG veya WEBP olarak dışa aktarın.');
+    throw new Error('PDF/AI/EPS/PSD are not supported directly. Please export as SVG, PNG, JPG or WEBP.');
   }
   const url = URL.createObjectURL(file);
   try {

@@ -24,7 +24,7 @@ const state = {
   removedCache: null,  // { key, canvas }
 };
 
-const STATUS_LABEL = { ok: 'Uygun', info: 'Uygun (not var)', warn: 'Kontrol et', error: 'Sorunlu' };
+const STATUS_LABEL = { ok: 'OK', info: 'OK (notes)', warn: 'Check', error: 'Problem' };
 
 // ---------- options ----------
 
@@ -76,7 +76,7 @@ function renderSizeList() {
       const rm = document.createElement('button');
       rm.className = 'remove';
       rm.type = 'button';
-      rm.title = 'Kaldır';
+      rm.title = 'Remove';
       rm.textContent = '×';
       rm.addEventListener('click', () => { state.sizes.splice(i, 1); renderSizeList(); schedule(); });
       row.append(rm);
@@ -90,8 +90,8 @@ function renderSourceInfo() {
   const s = state.source;
   if (!s) { el.hidden = true; return; }
   const bg = state.bg;
-  const bgText = bg.type === 'transparent' ? 'şeffaf'
-    : bg.type === 'solid' ? `düz renk ${toHex(bg.color)}` : 'karışık (düz değil)';
+  const bgText = bg.type === 'transparent' ? 'transparent'
+    : bg.type === 'solid' ? `solid ${toHex(bg.color)}` : 'mixed (not solid)';
   const thumb = document.createElement('div');
   thumb.className = 'thumb';
   const img = document.createElement('img');
@@ -102,9 +102,9 @@ function renderSourceInfo() {
   txt.innerHTML = `<div><b></b></div><div></div><div></div>`;
   txt.children[0].firstChild.textContent = state.fileName;
   txt.children[1].textContent = s.isVector
-    ? `Vektör (SVG) · ${s.originalWidth}×${s.originalHeight}`
+    ? `Vector (SVG) · ${s.originalWidth}×${s.originalHeight}`
     : `${s.originalWidth}×${s.originalHeight}px · ${(state.fileType.split('/')[1] || '').toUpperCase()}`;
-  txt.children[2].textContent = `Arka plan: ${bgText}`;
+  txt.children[2].textContent = `Background: ${bgText}`;
   el.replaceChildren(thumb, txt);
   el.hidden = false;
 }
@@ -112,17 +112,17 @@ function renderSourceInfo() {
 function updateControls(opts) {
   $('qualityVal').textContent = Math.round(opts.quality * 100);
   $('qualityField').style.visibility = opts.format === 'jpg' ? 'visible' : 'hidden';
-  $('paddingVal').textContent = `%${Math.round(opts.padding * 100)}`;
+  $('paddingVal').textContent = `${Math.round(opts.padding * 100)}%`;
   $('toleranceVal').textContent = opts.tolerance;
   $('customColor').hidden = opts.frameMode !== 'custom';
   $('bgOptions').hidden = !opts.removeBg;
   const hint = $('bgHint');
   if (state.bg) {
     hint.textContent = state.bg.type === 'transparent'
-      ? 'Kaynak zaten şeffaf; temizlenecek arka plan yok.'
+      ? 'Source is already transparent; no background to remove.'
       : state.bg.type === 'solid'
-        ? `Kenarlardan başlayarak ${toHex(state.bg.color)} rengi temizlenir. Kenarlarda iz kalırsa toleransı artırın, logodan parça giderse azaltın.`
-        : 'Arka plan düz renk değil; en baskın kenar rengi temizlenir, sonuç kusurlu olabilir.';
+        ? `Removes ${toHex(state.bg.color)} starting from the edges. Increase tolerance if traces remain; decrease it if parts of the logo disappear.`
+        : 'Background is not a solid colour; the dominant edge colour is removed, results may be imperfect.';
   }
 }
 
@@ -135,7 +135,7 @@ function makeCard(res, opts) {
     <div class="preview"></div>
     <div class="meta"></div>
     <ul class="findings"></ul>
-    <div class="card-foot"><span class="size"></span><button type="button" class="btn small">İndir</button></div>`;
+    <div class="card-foot"><span class="size"></span><button type="button" class="btn small">Download</button></div>`;
   card.querySelector('h3').textContent = `${size.width} × ${size.height}`;
   const badge = card.querySelector('.badge');
   badge.classList.add(evalr.status);
@@ -146,7 +146,7 @@ function makeCard(res, opts) {
   canvas.style.width = `${size.width * zoom}px`;
   card.querySelector('.preview').append(canvas);
   card.querySelector('.meta').textContent =
-    `Logo alanı: ${render.logoWidth}×${render.logoHeight}px · ölçek ${evalr.scale.toFixed(2)}× · doluluk %${Math.round(evalr.fill * 100)}`;
+    `Logo area: ${render.logoWidth}×${render.logoHeight}px · scale ${evalr.scale.toFixed(2)}× · fill ${Math.round(evalr.fill * 100)}%`;
 
   const ul = card.querySelector('.findings');
   for (const it of evalr.items) {
@@ -223,7 +223,7 @@ function process() {
   const tol = Math.max(18, opts.tolerance);
   const box = contentBounds(getPixels(working), trimBg, tol);
   if (box.empty) {
-    toast('Görselde logo bulunamadı (tamamen boş ya da tamamı arka plan rengi). Toleransı düşürmeyi deneyin.', true);
+    toast('No logo found in the image (empty or entirely background colour). Try lowering the tolerance.', true);
     return;
   }
   const logo = crop(working, withMargin(box, working.width, working.height));
@@ -259,7 +259,7 @@ let timer = 0;
 function schedule() {
   clearTimeout(timer);
   timer = setTimeout(() => {
-    try { process(); } catch (e) { console.error(e); toast(`İşlem sırasında hata: ${e.message}`, true); }
+    try { process(); } catch (e) { console.error(e); toast(`Processing error: ${e.message}`, true); }
   }, 60);
 }
 
@@ -313,7 +313,7 @@ async function downloadAll() {
     files.push({ name: fileNameFor(r.size, opts), blob: await encodeCanvas(r.render.canvas, opts) });
   }
   const zip = await makeZip(files);
-  download(zip, `${slug($('brandName').value)}_logolar.zip`);
+  download(zip, `${slug($('brandName').value)}_logos.zip`);
 }
 
 async function handleFile(file) {
@@ -322,7 +322,7 @@ async function handleFile(file) {
     const src = await loadImageFile(file);
     state.source = src;
     state.fileType = file.type || (file.name.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : '');
-    state.fileName = file.name || 'yapıştırılan-görsel.png';
+    state.fileName = file.name || 'pasted-image.png';
     state.bg = detectBackground(getPixels(src.canvas));
     state.removedCache = null;
     // per-logo settings start fresh for every new file
@@ -376,8 +376,8 @@ function init() {
   $('addSize').addEventListener('click', () => {
     const w = parseInt($('customW').value, 10);
     const h = parseInt($('customH').value, 10);
-    if (!(w >= 8 && h >= 8 && w <= 5000 && h <= 5000)) { toast('Genişlik ve yükseklik 8–5000 px arasında olmalı.', true); return; }
-    if (state.sizes.some((s) => s.width === w && s.height === h)) { toast('Bu boyut zaten listede.'); return; }
+    if (!(w >= 8 && h >= 8 && w <= 5000 && h <= 5000)) { toast('Width and height must be between 8 and 5000 px.', true); return; }
+    if (state.sizes.some((s) => s.width === w && s.height === h)) { toast('This size is already in the list.'); return; }
     state.sizes.push({ width: w, height: h, enabled: true, preset: false });
     $('customW').value = ''; $('customH').value = '';
     renderSizeList();

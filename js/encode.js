@@ -18,7 +18,7 @@ export function crc32(bytes, start = 0, end = bytes.length) {
 
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Görsel kodlanamadı'))), type, quality);
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not encode image'))), type, quality);
   });
 }
 

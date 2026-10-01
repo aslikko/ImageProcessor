@@ -1,32 +1,34 @@
-# Logo Hazırlayıcı
+# Logo Prep
 
-Operasyon ekibinin marka logolarını müşterinin istediği boyutlara (ör. Cadooz: 600×378, 200×126, 124×124, 75×75 – JPG, 72 dpi, köşesiz) hazırlaması için tarayıcıda çalışan araç. Sunucu yok; dosyalar hiçbir yere gönderilmez.
+Browser-based tool for the operations team to prepare brand logos in the exact sizes a client asks for (e.g. Cadooz: 600×378, 200×126, 124×124, 75×75 – JPG, 72 dpi, no rounded corners). No server; files never leave the browser.
 
-## Ne yapar
-- **Yükleme:** SVG (önerilen), PNG, JPG, WEBP – sürükle-bırak, tıkla veya Ctrl+V.
-- **Otomatik kırpma:** Logonun etrafındaki boşluk/zemin atılır.
-- **Çerçeveye oturtma:** Oran korunarak her boyutta mümkün olan en büyük hâlde ortalanır (kenar boşluğu ayarlanabilir).
-- **Çözünürlük:** Kaynak küçükse kademeli büyütme + akıllı keskinleştirme; büyükse kaliteli küçültme.
-- **Kalite kontrolü ve öneriler** (her boyut için ayrı):
-  - büyütme oranı / düşük çözünürlük, bulanıklık (kenar geçiş genişliği), JPEG sıkıştırma izi
-  - logo-çerçeve oran uyumsuzluğu ve doluluk (ör. kare boyut için ikon versiyonu önerisi)
-  - zemin-logo kontrastı, kaynak zemini ile çerçeve rengi uyumsuzluğu
-  - **yuvarlatılmış köşe tespiti** → tek tıkla çerçeveyi zemin rengiyle doldurup köşeleri düzleştirme
-  - Önerilerin çoğunda tek tıklık “düzelt” butonu vardır.
-- **Arka plan temizleme (isteğe bağlı):** Kenarlardan düz renk zemini siler, kenar yumuşatmasını korur; tolerans ve “harf içi boşluklar” seçenekleri.
-- **Çıktı:** JPG veya PNG, DPI meta verisi (varsayılan 72) dosyaya yazılır. Tek tek ya da tümü ZIP olarak indirilebilir. Özel boyut eklenebilir.
+**Live:** https://aslikko.github.io/ImageProcessor/
 
-## Çalıştırma
-ES modülleri kullandığı için `index.html` dosyaya çift tıklayarak değil, bir web sunucusundan açılmalı:
+## Features
+- **Upload:** SVG (recommended), PNG, JPG, WEBP – drag & drop, click, or Ctrl+V.
+- **Auto-trim:** Empty space / background around the logo is removed.
+- **Fit to frame:** Keeps the aspect ratio and centres the logo as large as possible in each size (adjustable padding).
+- **Resolution:** Small sources are upscaled step by step with smart sharpening; large ones are downscaled with high quality.
+- **Quality checks & recommendations** (per size):
+  - upscale factor / low resolution, blur (edge width), JPEG artifacts
+  - aspect-ratio mismatch and fill (e.g. suggests the icon version for square sizes)
+  - logo/background contrast, source background vs. frame colour mismatch
+  - **rounded-corner detection** → one click fills the frame with the tile colour so corners become square
+  - Most findings come with a one-click fix button.
+- **Background removal (optional):** Removes a solid background starting from the edges while keeping anti-aliased edges; tolerance and "enclosed areas" options.
+- **Output:** JPG or PNG with DPI metadata (default 72). Download one by one or all as ZIP. Custom sizes can be added.
+
+## Running locally
+The app uses ES modules, so open it through a web server rather than double-clicking `index.html`:
 
 ```bash
-npx serve .          # veya: python3 -m http.server
+npx serve .          # or: python3 -m http.server
 ```
 
-Ekip kullanımı için en kolayı **GitHub Pages**: Settings → Pages → bu branch / root.
+Pushes to the branch are deployed to GitHub Pages by `.github/workflows/pages.yml`.
 
 ## Test
 ```bash
 npx serve -l 8123 . &
-node tests/smoke.mjs   # playwright gerekir
+node tests/smoke.mjs   # requires playwright
 ```
