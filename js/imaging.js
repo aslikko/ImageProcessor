@@ -134,31 +134,59 @@ export function detectBackground(imageData) {
   const total = samples.length;
   if (transparent / total > 0.5) return { type: 'transparent', share: transparent / total };
 
-  let best = null;
-  for (const b of buckets.values()) if (!best || b.n > best.n) best = b;
-  if (!best) return { type: 'transparent', share: 1 };
-  const color = { r: best.r / best.n, g: best.g / best.n, b: best.b / best.n };
+  const sorted = [...buckets.values()].sort((a, b) => b.n - a.n);
+  if (!sorted.length) return { type: 'transparent', share: 1 };
+  const avg = (b) => ({ r: b.r / b.n, g: b.g / b.n, b: b.b / b.n });
+  const color = avg(sorted[0]);
 
-  // count all border samples close to that colour (buckets split near-identical colours)
-  let close = 0;
-  for (const i of samples) {
-    if (data[i + 3] >= 24 && colorDist(data[i], data[i + 1], data[i + 2], color.r, color.g, color.b) < 20) close++;
+  // share of border samples close to any of the given colours (buckets split near-identical colours)
+  const shareOf = (colors) => {
+    let close = 0;
+    for (const i of samples) {
+      if (data[i + 3] >= 24 && colors.some((c) => colorDist(data[i], data[i + 1], data[i + 2], c.r, c.g, c.b) < 20)) close++;
+    }
+    return close / total;
+  };
+  const share = shareOf([color]);
+  if (share > 0.6) return { type: 'solid', color, colors: [color], share };
+
+  // "fake transparency": a grey/white checkerboard baked into the image
+  const second = sorted.map(avg).find((c) => colorDist(c.r, c.g, c.b, color.r, color.g, color.b) >= 20);
+  if (second) {
+    const c2 = second;
+    const both = shareOf([color, c2]);
+    const neutral = (c) => Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < 24;
+    if (both > 0.6 && share > 0.15 && neutral(color) && neutral(c2) && colorDist(color.r, color.g, color.b, c2.r, c2.g, c2.b) < 90) {
+      const light = relLuminance(color) >= relLuminance(c2) ? color : c2;
+      return { type: 'checker', color: light, colors: [color, c2], share: both };
+    }
   }
-  const share = close / total;
-  return { type: share > 0.6 ? 'solid' : 'mixed', color, share };
+  return { type: 'mixed', color, colors: [color], share };
+}
+
+// Distance of a pixel to the closest background colour.
+export function bgDist(r, g, b, colors) {
+  let m = Infinity;
+  for (const c of colors) m = Math.min(m, colorDist(r, g, b, c.r, c.g, c.b));
+  return m;
+}
+
+export function isKeyedBg(bg) {
+  return !!bg && (bg.type === 'solid' || bg.type === 'checker');
 }
 
 // ---------- background removal ----------
 
 // Flood fills from the borders, making pixels similar to `bg` transparent.
 // `global` also removes enclosed areas of the same colour (letter holes etc.).
-export function removeBackground(canvas, bg, { tolerance = 30, global = false } = {}) {
+export function removeBackground(canvas, colors, { tolerance = 30, global = false } = {}) {
   const out = cloneCanvas(canvas);
   const ctx = ctx2d(out);
   const img = ctx.getImageData(0, 0, out.width, out.height);
   const { width: w, height: h, data } = img;
   const removed = new Uint8Array(w * h);
-  const dist = (p) => colorDist(data[p], data[p + 1], data[p + 2], bg.r, bg.g, bg.b);
+  const dist = (p) => bgDist(data[p], data[p + 1], data[p + 2], colors);
+  const nearest = (r, g, b) => colors.reduce((best, c) => (colorDist(r, g, b, c.r, c.g, c.b) < colorDist(r, g, b, best.r, best.g, best.b) ? c : best));
 
   if (global) {
     for (let i = 0, p = 0; i < removed.length; i++, p += 4) {
@@ -206,6 +234,7 @@ export function removeBackground(canvas, bg, { tolerance = 30, global = false } 
       const i = y * w + x;
       if (!rim[i]) continue;
       const p = i * 4;
+      const bg = nearest(src[p], src[p + 1], src[p + 2]);
       // most "non-background" neighbour within 3px = estimated logo colour
       let best = -1, fr = 0, fg = 0, fb = 0;
       for (let dy = -3; dy <= 3; dy++) {
@@ -218,7 +247,7 @@ export function removeBackground(canvas, bg, { tolerance = 30, global = false } 
           if (removed[j]) continue;
           const q = j * 4;
           if (src[q + 3] < 200) continue;
-          const d = colorDist(src[q], src[q + 1], src[q + 2], bg.r, bg.g, bg.b);
+          const d = bgDist(src[q], src[q + 1], src[q + 2], colors);
           if (d > best) { best = d; fr = src[q]; fg = src[q + 1]; fb = src[q + 2]; }
         }
       }
@@ -245,12 +274,12 @@ export function removeBackground(canvas, bg, { tolerance = 30, global = false } 
 export function contentBounds(imageData, bg, tolerance = 30) {
   const { width: w, height: h, data } = imageData;
   let minX = w, minY = h, maxX = -1, maxY = -1;
-  const solid = bg && bg.type === 'solid';
+  const solid = isKeyedBg(bg);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const p = (y * w + x) * 4;
       if (data[p + 3] < 16) continue;
-      if (solid && colorDist(data[p], data[p + 1], data[p + 2], bg.color.r, bg.color.g, bg.color.b) <= tolerance) continue;
+      if (solid && bgDist(data[p], data[p + 1], data[p + 2], bg.colors) <= tolerance) continue;
       if (x < minX) minX = x;
       if (x > maxX) maxX = x;
       if (y < minY) minY = y;

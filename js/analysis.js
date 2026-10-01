@@ -1,6 +1,6 @@
 // Quality analysis of the source logo and per-size recommendations.
 
-import { getPixels, resize, colorDist, contrastRatio, toHex } from './imaging.js';
+import { getPixels, resize, colorDist, contrastRatio, toHex, bgDist, isKeyedBg } from './imaging.js';
 
 const ANALYSIS_MAX = 1200; // longest side of the working copy used for measurements
 
@@ -98,7 +98,7 @@ function detectRoundedTile(canvas, bg) {
   const { width: w, height: h, data } = getPixels(canvas);
   if (w < 24 || h < 24) return null;
   const px = (x, y) => { const p = (Math.round(y) * w + Math.round(x)) * 4; return [data[p], data[p + 1], data[p + 2], data[p + 3]]; };
-  const isBg = ([r, g, b, a]) => a < 32 || (bg.type === 'solid' && colorDist(r, g, b, bg.color.r, bg.color.g, bg.color.b) < 24);
+  const isBg = ([r, g, b, a]) => a < 32 || (isKeyedBg(bg) && bgDist(r, g, b, bg.colors) < 24);
 
   const corners = [px(0, 0), px(w - 1, 0), px(0, h - 1), px(w - 1, h - 1)];
   const inset = Math.max(2, Math.round(Math.min(w, h) * 0.02));
@@ -118,7 +118,7 @@ export function analyzeLogo({ logo, source, trimmedSource, bg, isVector, sourceT
   const sharp = measureSharpness(lm);
   const rounded = detectRoundedTile(trimmedSource, bg);
   const exclude = [];
-  if (bg.type === 'solid') exclude.push(bg.color);
+  if (isKeyedBg(bg)) exclude.push(...bg.colors);
   if (rounded) exclude.push(rounded.color);
   return {
     isVector,
@@ -200,6 +200,10 @@ export function evaluateSize(a, size, opts) {
   if (!opts.removeBg && a.bg.type === 'solid' && frameColor && colorDist(frameColor.r, frameColor.g, frameColor.b, a.bg.color.r, a.bg.color.g, a.bg.color.b) > 12) {
     add('warn', `Source background (${toHex(a.bg.color)}) differs from the frame colour; a box may be visible around the logo.`,
       { action: 'removeBg', label: 'Remove background' });
+  }
+  if (!opts.removeBg && a.bg.type === 'checker') {
+    add('error', 'The source has a fake transparency checkerboard baked into the image. It will show up in the output – remove it.',
+      { action: 'removeBg', label: 'Remove checkerboard' });
   }
   if (!opts.removeBg && a.bg.type === 'mixed') {
     add('warn', 'Background is not a solid colour (gradient/photo). Results may be off; prefer a transparent or solid-background source.');

@@ -91,7 +91,8 @@ function renderSourceInfo() {
   if (!s) { el.hidden = true; return; }
   const bg = state.bg;
   const bgText = bg.type === 'transparent' ? 'transparent'
-    : bg.type === 'solid' ? `solid ${toHex(bg.color)}` : 'mixed (not solid)';
+    : bg.type === 'solid' ? `solid ${toHex(bg.color)}`
+      : bg.type === 'checker' ? 'fake transparency (checkerboard)' : 'mixed (not solid)';
   const thumb = document.createElement('div');
   thumb.className = 'thumb';
   const img = document.createElement('img');
@@ -120,7 +121,9 @@ function updateControls(opts) {
   if (state.bg) {
     hint.textContent = state.bg.type === 'transparent'
       ? 'Source is already transparent; no background to remove.'
-      : state.bg.type === 'solid'
+      : state.bg.type === 'checker'
+        ? 'Removes the baked-in grey/white checkerboard. Increase tolerance if traces remain.'
+        : state.bg.type === 'solid'
         ? `Removes ${toHex(state.bg.color)} starting from the edges. Increase tolerance if traces remain; decrease it if parts of the logo disappear.`
         : 'Background is not a solid colour; the dominant edge colour is removed, results may be imperfect.';
   }
@@ -199,7 +202,7 @@ function workingCanvas(opts) {
   if (state.removedCache?.key !== key) {
     state.removedCache = {
       key,
-      canvas: removeBackground(source.canvas, bg.color, { tolerance: opts.tolerance, global: opts.globalRemove }),
+      canvas: removeBackground(source.canvas, bg.colors, { tolerance: opts.tolerance, global: opts.globalRemove }),
     };
   }
   return state.removedCache.canvas;
@@ -278,7 +281,7 @@ function applyFix(fix) {
     case 'roundedFix':
       $('frameMode').value = 'custom';
       $('customColor').value = fix.value;
-      if (state.bg.type === 'solid') $('removeBg').checked = true;
+      if (state.bg.type === 'solid' || state.bg.type === 'checker') $('removeBg').checked = true;
       break;
   }
   schedule();
